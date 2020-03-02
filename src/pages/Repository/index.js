@@ -74,7 +74,7 @@ export default class Repository extends Component {
   handleFilter = async state => {
     this.setState({ repoState: state, currentPage: 1 });
 
-    await this.getIssues({ state });
+    this.getIssues({ state });
   };
 
   handlePagination = async direction => {
@@ -83,7 +83,7 @@ export default class Repository extends Component {
 
     this.setState({ currentPage: page });
 
-    await this.getIssues({ state: repoState, page });
+    this.getIssues({ state: repoState, page });
   };
 
   render() {
