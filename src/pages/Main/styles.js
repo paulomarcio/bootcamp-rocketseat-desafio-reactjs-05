@@ -14,6 +14,14 @@ export const Form = styled.form`
   }
 `;
 
+export const Input = styled.input`
+  ${({ error }) =>
+    error &&
+    `
+    border: 1px solid red !important;
+  `}
+`;
+
 const rotate = keyframes`
   from {
     transform: rotate(0deg);

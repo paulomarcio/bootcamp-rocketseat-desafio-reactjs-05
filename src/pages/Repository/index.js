@@ -4,7 +4,13 @@ import PropTypes from 'prop-types';
 import api from '../../services/api';
 
 import Container from '../../components/Container';
-import { Loading, Owner, IssueList } from './styles';
+import {
+  Loading,
+  Owner,
+  IssueList,
+  IssueStates,
+  IssuesPagination,
+} from './styles';
 
 export default class Repository extends Component {
   static propTypes = {
@@ -19,18 +25,24 @@ export default class Repository extends Component {
     repository: {},
     issues: [],
     loading: true,
+    issueStates: ['open', 'closed', 'all'],
+    repoState: 'open',
+    perPage: 5,
+    currentPage: 1,
   };
 
   async componentDidMount() {
     const { match } = this.props;
+    const { repoState, perPage, currentPage } = this.state;
     const repoName = decodeURIComponent(match.params.repository);
 
     const [repository, issues] = await Promise.all([
       api.get(`/repos/${repoName}`),
       api.get(`/repos/${repoName}/issues`, {
         params: {
-          state: 'open',
-          per_page: 5,
+          state: repoState,
+          per_page: perPage,
+          page: currentPage,
         },
       }),
     ]);
@@ -42,8 +54,47 @@ export default class Repository extends Component {
     });
   }
 
+  getIssues = async ({ state = 'open', page = 1 }) => {
+    const { match } = this.props;
+    const repoName = decodeURIComponent(match.params.repository);
+    const { perPage } = this.state;
+    const issues = await api.get(`/repos/${repoName}/issues`, {
+      params: {
+        state,
+        per_page: perPage,
+        page,
+      },
+    });
+
+    this.setState({
+      issues: issues.data,
+    });
+  };
+
+  handleFilter = async state => {
+    this.setState({ repoState: state, currentPage: 1 });
+
+    await this.getIssues({ state });
+  };
+
+  handlePagination = async direction => {
+    const { repoState, currentPage } = this.state;
+    const page = direction === 'next' ? currentPage + 1 : currentPage - 1;
+
+    this.setState({ currentPage: page });
+
+    await this.getIssues({ state: repoState, page });
+  };
+
   render() {
-    const { repository, issues, loading } = this.state;
+    const {
+      repository,
+      issues,
+      loading,
+      issueStates,
+      repoState,
+      currentPage,
+    } = this.state;
 
     if (loading) {
       return <Loading>Carregando</Loading>;
@@ -57,6 +108,20 @@ export default class Repository extends Component {
           <h1>{repository.name}</h1>
           <p>{repository.description}</p>
         </Owner>
+
+        <IssueStates>
+          {issueStates.map(state => (
+            <li key={state}>
+              <button
+                className={repoState === state ? 'selected' : ''}
+                type="button"
+                onClick={() => this.handleFilter(state)}
+              >
+                {state}
+              </button>
+            </li>
+          ))}
+        </IssueStates>
 
         <IssueList>
           {issues.map(issue => (
@@ -74,6 +139,27 @@ export default class Repository extends Component {
             </li>
           ))}
         </IssueList>
+
+        <IssuesPagination>
+          <li>
+            <button
+              disabled={currentPage === 1 ? 1 : 0}
+              onClick={() => this.handlePagination('previous')}
+              type="button"
+            >
+              Anterior
+            </button>
+          </li>
+          <li>
+            <button
+              disabled={currentPage === 2 ? 1 : 0}
+              onClick={() => this.handlePagination('next')}
+              type="button"
+            >
+              Próximo
+            </button>
+          </li>
+        </IssuesPagination>
       </Container>
     );
   }
